@@ -68,13 +68,29 @@
     .btn-back-canvas:hover { background: #f8fafc; }
     .login-error { color: #ef4444; font-size: 12px; font-weight: 600; margin-top: 10px; text-align: center; display: none; }
 
-    /* TOPBAR */
+    /* TOPBAR & NOTIFICATIONS */
     .topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
     .topbar-brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 800; color: var(--primary-blue); }
-    .user-pill { display: flex; align-items: center; gap: 12px; }
+    .user-pill { display: flex; align-items: center; gap: 12px; position: relative; }
     .badge-role { background: #eff6ff; color: var(--primary-blue); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; border: 1px solid #bfdbfe; text-transform: uppercase; }
     .btn-logout { background: #f1f5f9; border: none; padding: 8px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s, color 0.2s; color: var(--text-muted); }
     .btn-logout:hover { background: #e2e8f0; color: #ef4444; }
+
+    /* NUEVO: CAMPANITA Y PANEL DE NOTIFICACIONES */
+    .notif-wrapper { position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #f8fafc; transition: background 0.2s; margin-right: 4px; }
+    .notif-wrapper:hover { background: #e2e8f0; }
+    .notif-bell { font-size: 18px; }
+    .notif-badge { position: absolute; top: -2px; right: -2px; background: var(--accent-pink); color: white; border-radius: 50%; min-width: 18px; height: 18px; font-size: 10px; font-weight: bold; display: flex; justify-content: center; align-items: center; padding: 0 4px; border: 2px solid white; }
+    .notif-panel { position: absolute; top: 46px; right: 0; width: 320px; background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-card); display: none; flex-direction: column; z-index: 200; max-height: 400px; overflow: hidden; cursor: default; }
+    .notif-panel.active { display: flex; animation: fadeIn 0.2s ease forwards; }
+    .notif-header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-weight: 800; font-size: 13px; color: var(--primary-blue); background: #f8fafc; display: flex; justify-content: space-between; align-items: center; }
+    .notif-list-container { overflow-y: auto; max-height: 350px; }
+    .notif-item { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 12px; line-height: 1.4; transition: background 0.2s; cursor: pointer; position: relative; }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item.unread { background: #fff5f8; }
+    .notif-item.unread::before { content: ""; position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 6px; height: 6px; background: var(--accent-pink); border-radius: 50%; }
+    .notif-item:hover { background: #f1f5f9; }
+    .notif-time { font-size: 10px; color: var(--text-muted); margin-top: 6px; font-weight: 600; }
 
     /* CANVAS MASTER */
     .canvas-container { max-width: 1100px; margin: 40px auto; padding: 0 24px; width: 100%; }
@@ -177,7 +193,6 @@
     .stat-box { background: #fff; border: 1px solid var(--border); padding: 16px 24px; border-radius: var(--radius-md); flex: 1; min-width: 180px; display: flex; flex-direction: column; align-items: center; position: relative; overflow: hidden; }
     .stat-box::after { content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: var(--accent-pink); }
     .stat-number { font-size: 28px; font-weight: 800; color: var(--primary-blue); margin-top: 4px; }
-    .tracking-filters { display: flex; gap: 12px; align-items: flex-end; background: #fff; padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 24px; flex-wrap: wrap; }
 
     /* MODALES */
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15,23,42,0.6); display: flex; justify-content: center; align-items: center; z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.2s; padding: 20px; }
@@ -207,6 +222,8 @@
     .image-preview-box { display: none; position: relative; margin-top: 8px; margin-bottom: 8px; background: #f1f5f9; padding: 8px; border-radius: 6px; border: 1px dashed var(--border); text-align: center; }
     .image-preview-box img { max-height: 100px; max-width: 100%; border-radius: 4px; }
     .image-preview-remove { position: absolute; top: -5px; right: -5px; background: #ef4444; color: #fff; border: none; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 12px; font-weight: bold; }
+    
+    .note-shared-tag { display: inline-block; background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; margin-bottom: 4px; }
   </style>
 
   <!-- ========================================== -->
@@ -275,6 +292,23 @@
     <header class="topbar">
       <div class="topbar-brand"><span class="brand-dot"></span>MIRNA CENTRAL HUB</div>
       <div class="user-pill">
+        
+        <!-- PANEL DE NOTIFICACIONES -->
+        <div class="notif-wrapper" onclick="toggleNotifPanel()">
+          <span class="notif-bell">🔔</span>
+          <span class="notif-badge" id="notifBadgeCount" style="display:none;">0</span>
+          
+          <div class="notif-panel" id="notifPanelDiv" onclick="event.stopPropagation()">
+            <div class="notif-header">
+              <span>Notificaciones Recientes</span>
+              <button onclick="toggleNotifPanel()" style="background:none; border:none; cursor:pointer; font-weight:bold; color:var(--text-muted);">✕</button>
+            </div>
+            <div class="notif-list-container" id="notifList">
+              <div style="padding:16px; text-align:center; color:#888; font-size:12px;">No tienes notificaciones</div>
+            </div>
+          </div>
+        </div>
+
         <span class="badge-role" id="displayRoleBadge">MASTER</span>
         <strong id="displayUserName" style="font-size: 13px;">Usuario</strong>
         <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
@@ -300,7 +334,6 @@
           <div class="card-tag">Abrir Flujo ➔</div>
         </article>
 
-        <!-- MÓDULO API: LIVE ANALYTICS & PAUTA -->
         <article class="canvas-card card-restrict" id="cardPauta" onclick="abrirModulo('analytics')">
           <div class="card-icon">📊</div>
           <h3 class="card-title">Live Analytics & Pauta</h3>
@@ -308,7 +341,6 @@
           <div class="card-tag">Abrir Dashboard ➔</div>
         </article>
 
-        <!-- NUEVO MÓDULO BÓVEDA DE APIS (SOLO MASTER) -->
         <article class="canvas-card card-restrict api-config-card" id="cardApiConfig" onclick="abrirModalBovedaApi()">
           <div class="card-icon">⚙️</div>
           <h3 class="card-title">Bóveda de APIs</h3>
@@ -348,27 +380,25 @@
 
       <div class="analytics-grid">
 
-        <!-- Global Tracking -->
         <div class="analytics-card global">
             <h2>Global Tracking (Correlacionador Maestro) <span class="analytics-status" style="background:#dcfce7; color:#15803d;">Conectado</span></h2>
             <div style="display: flex; gap: 24px; flex-wrap: wrap; margin-top: 16px;">
                 <div style="flex:1;">
-                    <div class="analytics-metric-title">Comunidad Total <span class="tooltip-icon" data-tooltip="Suma de seguidores de Facebook, Instagram y TikTok">i</span></div>
+                    <div class="analytics-metric-title">Comunidad Total</div>
                     <div class="analytics-metric-value" id="global-comunidad">--</div>
                 </div>
                 <div style="flex:1;">
-                    <div class="analytics-metric-title">Alcance Acumulado <span class="tooltip-icon" data-tooltip="Total de personas únicas impactadas en los últimos 30 días">i</span></div>
+                    <div class="analytics-metric-title">Alcance Acumulado</div>
                     <div class="analytics-metric-value">540.2K</div>
                 </div>
                 <div style="flex:1;">
-                    <div class="analytics-metric-title">Eng. Rate Global <span class="tooltip-icon" data-tooltip="Promedio de interacción respecto al alcance en todas las redes">i</span></div>
+                    <div class="analytics-metric-title">Eng. Rate Global</div>
                     <div class="analytics-metric-value">4.8%</div>
                 </div>
             </div>
             <button class="btn-back-canvas" style="margin-top: 16px; width: 100%; border-color: var(--primary-blue); color: var(--primary-blue);" onclick="abrirPopUpAnaliticaAvanzada('global')">Abrir Unified Inbox & Top 20 Global ➔</button>
         </div>
 
-        <!-- Tarjetas Analítica... -->
         <div class="analytics-card meta" onclick="abrirPopUpAnaliticaAvanzada('facebook')">
             <h2>Facebook (Orgánico) <span class="analytics-status" id="fb-status">Cargando...</span></h2>
             <div class="analytics-metric">
@@ -390,16 +420,16 @@
         <div class="analytics-card meta" onclick="abrirPopUpAnaliticaAvanzada('metaAds')">
             <h2>Meta Ads (Pauta 30 Días) <span class="analytics-status" id="ads-status">Cargando...</span></h2>
             <div class="analytics-metric">
-                <div class="analytics-metric-title">Inversión (USD) <span class="tooltip-icon" data-tooltip="Monto real gastado facturado por Meta en los últimos 30 días">i</span></div>
+                <div class="analytics-metric-title">Inversión (USD)</div>
                 <div class="analytics-metric-value" id="ads-spend">$--</div>
             </div>
             <div class="analytics-metric" style="display: flex; justify-content: space-between; margin-top: 10px;">
                 <div>
-                  <div class="analytics-metric-title">Impresiones <span class="tooltip-icon" data-tooltip="Veces que tus anuncios aparecieron en pantalla">i</span></div>
+                  <div class="analytics-metric-title">Impresiones</div>
                   <div style="font-size: 16px; font-weight: 700; color: var(--text-main);" id="ads-impressions">--</div>
                 </div>
                 <div>
-                  <div class="analytics-metric-title">Clics <span class="tooltip-icon" data-tooltip="Clics totales en el enlace (CTR general)">i</span></div>
+                  <div class="analytics-metric-title">Clics</div>
                   <div style="font-size: 16px; font-weight: 700; color: var(--text-main);" id="ads-clicks">--</div>
                 </div>
             </div>
@@ -419,9 +449,7 @@
     </main>
   </section>
 
-  <!-- ==================================================== -->
-  <!-- MODALES UI/UX: DEEP DIVE ANALYTICS -->
-  <!-- ==================================================== -->
+  <!-- MODAL DEEP DIVE ANALYTICS -->
   <div class="modal-overlay" id="modalDeepDiveAnalytics">
     <div class="modal-box large">
       <div class="modal-header-flex">
@@ -436,9 +464,7 @@
     </div>
   </div>
 
-  <!-- ==================================================== -->
   <!-- MODAL BÓVEDA DE APIS (SOLO MASTER) -->
-  <!-- ==================================================== -->
   <div class="modal-overlay" id="modalApiConfig">
     <div class="modal-box">
       <div class="modal-header-flex">
@@ -751,10 +777,16 @@
     </div>
     <div class="notes-body" id="notesMainMenu" style="align-items: center; justify-content: center; gap: 15px;">
        <button class="btn-action" onclick="abrirVistaNuevaNota()">+ Nueva Nota</button>
-       <button class="btn-back-canvas" style="width: 100%; justify-content:center; padding:12px;" onclick="abrirVistaListaNotas()">Ver notas anteriores</button>
+       <button class="btn-back-canvas" style="width: 100%; justify-content:center; padding:12px;" onclick="abrirVistaListaNotas()">Ver notas</button>
     </div>
     <div class="notes-body" id="notesNewView" style="display:none;">
        <button class="btn-back-canvas" style="margin-bottom:12px; width: fit-content; padding: 4px 10px; font-size:11px;" onclick="volverMenuNotas()">⬅ Atrás</button>
+       
+       <label style="font-size: 10px;">Compartir con (Opcional)</label>
+       <select id="notaShareWith" style="margin-bottom:12px; font-weight:bold; padding: 8px; border: 1px solid var(--border); border-radius: 6px;">
+          <option value="">-- Solo para mí --</option>
+       </select>
+
        <input type="text" id="txtNotaTitulo" placeholder="Título de la nota..." style="margin-bottom:8px; font-weight:bold; padding: 10px;">
        <textarea id="txtNewNote" placeholder="Descripción... Puedes pegar (Ctrl+V) una imagen aquí." style="min-height: 100px; resize:none; padding: 10px;"></textarea>
        <div class="image-preview-box" id="boxNotaPreview">
@@ -790,6 +822,10 @@
     let imagenPegadaType = null;
     let imagenPegadaName = null;
 
+    // SISTEMA DE NOTIFICACIONES
+    let unsubscribeNotifs = null;
+    let notifsInicializadas = false;
+
     function showToast(message, type = 'success') {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
@@ -798,6 +834,100 @@
       container.appendChild(toast);
       setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => toast.remove(), 300); }, 3500);
     }
+
+    // NAVEGADOR PUSH NOTIFICATIONS
+    function pedirPermisoNotificaciones() {
+      if ("Notification" in window) {
+        if (Notification.permission === "default") {
+          Notification.requestPermission();
+        }
+      }
+    }
+
+    function dispararNotificacionNavegador(titulo, body) {
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(titulo, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/1827/1827370.png" });
+      }
+    }
+
+    // CARGAR NOTIFICACIONES EN TIEMPO REAL
+    function cargarNotificaciones() {
+      if(!usuarioActual || !window.db) return;
+      const notifRef = window.fbQuery(window.fbCollection(window.db, "notificaciones"), window.fbOrderBy("fecha", "desc"));
+      
+      unsubscribeNotifs = window.fbOnSnapshot(notifRef, (snapshot) => {
+        let unreadCount = 0;
+        const listDiv = document.getElementById('notifList');
+        listDiv.innerHTML = '';
+        
+        snapshot.forEach(doc => {
+          const n = doc.data();
+          if(n.para === usuarioActual.nombreMostrar) {
+            if(!n.leido) unreadCount++;
+            
+            // Si es nueva (creada hace menos de 5 segs) y no hemos avisado, disparamos push notification
+            const ageMs = new Date() - new Date(n.fecha);
+            if(notifsInicializadas && !n.leido && ageMs < 5000 && !n.pushEnviado) {
+              dispararNotificacionNavegador("Central Hub Almacenes Mirna", n.mensaje);
+              window.fbUpdateDoc(window.fbDoc(window.db, "notificaciones", doc.id), {pushEnviado: true});
+            }
+
+            const d = new Date(n.fecha);
+            const item = document.createElement('div');
+            item.className = `notif-item ${n.leido ? '' : 'unread'}`;
+            item.innerHTML = `<div>${n.mensaje}</div><div class="notif-time">${d.toLocaleDateString()} ${d.toLocaleTimeString()}</div>`;
+            item.onclick = (e) => {
+              e.stopPropagation();
+              marcarNotifLeida(doc.id);
+            };
+            listDiv.appendChild(item);
+          }
+        });
+
+        if(listDiv.innerHTML === '') listDiv.innerHTML = '<div style="padding:16px; text-align:center; color:#888; font-size:12px;">No tienes notificaciones</div>';
+        
+        const badge = document.getElementById('notifBadgeCount');
+        if(unreadCount > 0) {
+          badge.style.display = 'flex';
+          badge.innerText = unreadCount;
+        } else {
+          badge.style.display = 'none';
+        }
+        
+        notifsInicializadas = true;
+      });
+    }
+
+    async function crearNotificacion(para, mensaje) {
+      if(!window.db) return;
+      try {
+        await window.fbAddDoc(window.fbCollection(window.db, "notificaciones"), {
+          para: para,
+          mensaje: mensaje,
+          leido: false,
+          pushEnviado: false,
+          fecha: new Date().toISOString()
+        });
+      } catch(e) { console.error("Error al crear notificación", e); }
+    }
+
+    async function marcarNotifLeida(id) {
+      if(!window.db) return;
+      try {
+        await window.fbUpdateDoc(window.fbDoc(window.db, "notificaciones", id), { leido: true });
+      } catch(e) {}
+    }
+
+    function toggleNotifPanel() {
+      document.getElementById('notifPanelDiv').classList.toggle('active');
+    }
+    // Cerrar panel si das click afuera
+    window.addEventListener('click', function(e) {
+      const panel = document.getElementById('notifPanelDiv');
+      if(panel.classList.contains('active') && !e.target.closest('.notif-wrapper')) {
+        panel.classList.remove('active');
+      }
+    });
 
     function limpiarFecha(fechaRaw) {
       if (!fechaRaw) return "Sin fecha";
@@ -887,8 +1017,14 @@
           document.getElementById('displayUserName').innerText = usuarioActual.nombreMostrar;
           document.getElementById('displayRoleBadge').innerText = usuarioActual.tipo;
           document.getElementById('btnOpenNotes').style.display = 'block';
+          
           showToast(`Bienvenido ${usuarioActual.nombreMostrar}`);
           mostrarPantalla('screenCanvas');
+          
+          // Inicializar sistemas extra
+          pedirPermisoNotificaciones();
+          cargarNotificaciones();
+          cargarUsuariosEquipo(); // Para rellenar listas (como notas)
           cargarNotas(); 
         } else { 
           errBox.innerText = data.message || "Usuario o contraseña inválidos."; errBox.style.display = "block"; 
@@ -917,6 +1053,9 @@
 
     function cerrarSesion() {
       usuarioActual = null;
+      if (unsubscribeNotifs) unsubscribeNotifs(); // Dejar de escuchar notificaciones
+      notifsInicializadas = false;
+
       document.getElementById('inputPass').value = '';
       document.getElementById('btnOpenNotes').style.display = 'none';
       document.querySelectorAll('.card-restrict').forEach(c => c.style.display = 'flex');
@@ -930,10 +1069,25 @@
         const res = await fetch(APPS_SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ accion: "obtenerUsuarios" }) });
         const data = await res.json();
         listaUsuariosEquipo = data.data || [];
+        
+        // Tabla responsables
         const filterResp = document.getElementById('filtroResponsableTabla');
         filterResp.innerHTML = '<option value="">Todos</option>';
         listaUsuariosEquipo.forEach(u => filterResp.innerHTML += `<option value="${u.nombreMostrar.toLowerCase()}">${u.nombreMostrar}</option>`);
-      } catch (e) { showToast('Error cargando el equipo', 'error'); }
+
+        // Compartir notas
+        const shareNotes = document.getElementById('notaShareWith');
+        if (shareNotes) {
+          shareNotes.innerHTML = '<option value="">-- Solo para mí --</option>';
+          listaUsuariosEquipo.forEach(u => {
+             // No listar al usuario actual en la lista de compartir
+             if(u.nombreMostrar !== usuarioActual.nombreMostrar) {
+                 shareNotes.innerHTML += `<option value="${u.nombreMostrar}">${u.nombreMostrar}</option>`;
+             }
+          });
+        }
+
+      } catch (e) { console.error('Error cargando el equipo', e); }
     }
 
     function cargarTareas() {
@@ -1108,7 +1262,7 @@
     }
 
     // ==========================================
-    // MANEJO DE DETALLE DE TAREA Y BOTÓN DE BORRAR
+    // MANEJO DE DETALLE DE TAREA Y ASIGNACIONES
     // ==========================================
     function abrirModalDetalle(id) {
       tareaSeleccionada = listaSolicitudes.find(t => String(t.id) === String(id));
@@ -1165,7 +1319,10 @@
       if(!tareaSeleccionada) return;
       const btn = document.getElementById('btnSaveTask'); btn.innerText = "Guardando..."; btn.disabled = true;
 
-      const payload = { responsable: document.getElementById('selectResponsable').value, estado: document.getElementById('selectEstado').value };
+      const newResponsable = document.getElementById('selectResponsable').value;
+      const oldResponsable = tareaSeleccionada.responsable;
+
+      const payload = { responsable: newResponsable, estado: document.getElementById('selectEstado').value };
       if(usuarioActual.tipo !== 'General') { 
         payload.fechaDeseada = document.getElementById('modalEditDate').value; 
         payload.prioridad = document.getElementById('selectPrioridad').value; 
@@ -1175,6 +1332,12 @@
       try {
         const tareaRef = window.fbDoc(window.db, "solicitudes", tareaSeleccionada.id);
         await window.fbUpdateDoc(tareaRef, payload);
+        
+        // Notificar si se le asignó a alguien nuevo que no soy yo mismo
+        if (newResponsable && newResponsable !== oldResponsable && newResponsable !== usuarioActual.nombreMostrar) {
+          crearNotificacion(newResponsable, `Se te ha asignado un nuevo requerimiento: ${tareaSeleccionada.reqVisual} - ${tareaSeleccionada.titulo}`);
+        }
+
         cerrarModalDetalle(); showToast('Tarea actualizada');
       } catch(err) { showToast('Error al guardar', 'error'); } finally { btn.innerText = "Guardar Cambios 💾"; btn.disabled = false; }
     });
@@ -1340,7 +1503,7 @@
           document.getElementById('ads-status').style.color = '#ef4444';
       }
 
-      // Actualizar Global Tracking (Sumatoria local temporal)
+      // Actualizar Global Tracking
       setTimeout(() => {
           const total = (window.fbCount || 0) + (window.igCount || 0) + 120500; // Asumiendo TikTok base
           document.getElementById('global-comunidad').innerText = total.toLocaleString('es-ES');
@@ -1373,7 +1536,10 @@
         listaNotasGlobal = [];
         snapshot.forEach((doc) => {
           let n = doc.data();
-          if(n.nombreMostrar === usuarioActual.nombreMostrar) listaNotasGlobal.push(n);
+          // Solo muestra la nota si el usuario la creó O si se la compartieron
+          if(n.nombreMostrar === usuarioActual.nombreMostrar || n.compartidoCon === usuarioActual.nombreMostrar) {
+             listaNotasGlobal.push(n);
+          }
         });
         listaNotasGlobal.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
         const list = document.getElementById('notesListItems'); list.innerHTML = '';
@@ -1381,14 +1547,24 @@
         else {
           listaNotasGlobal.forEach((n, index) => {
             const dateObj = new Date(n.fecha), tituloMostrar = n.titulo || "Nota Rápida";
-            list.innerHTML += `<div class="note-item" onclick="abrirPopUpNota(${index})"><div class="note-date">${dateObj.toLocaleDateString()} - ${dateObj.toLocaleTimeString()}</div><div>${tituloMostrar}</div></div>`;
+            let etiquetaCompartido = '';
+            if (n.compartidoCon === usuarioActual.nombreMostrar) {
+                etiquetaCompartido = `<span class="note-shared-tag">Compartido por ${n.nombreMostrar}</span>`;
+            } else if (n.compartidoCon) {
+                etiquetaCompartido = `<span class="note-shared-tag" style="background:#f1f5f9; color:#64748b;">Compartido con ${n.compartidoCon}</span>`;
+            }
+
+            list.innerHTML += `<div class="note-item" onclick="alert('Funcionalidad de ver nota completa pendiente')"><div class="note-date">${dateObj.toLocaleDateString()} - ${dateObj.toLocaleTimeString()}</div>${etiquetaCompartido}<div>${tituloMostrar}</div></div>`;
           });
         }
       });
     }
 
     async function guardarNotaRapida() {
-      const titulo = document.getElementById('txtNotaTitulo'), txt = document.getElementById('txtNewNote');
+      const titulo = document.getElementById('txtNotaTitulo');
+      const txt = document.getElementById('txtNewNote');
+      const shareWith = document.getElementById('notaShareWith').value; // A quien se le comparte
+      
       if((!txt.value.trim() && !imagenPegadaBase64) || !usuarioActual) return;
 
       const btn = document.getElementById('btnGuardarNotaBtn'); btn.innerText = 'Subiendo imagen...'; btn.disabled = true; txt.disabled = true; titulo.disabled = true;
@@ -1408,10 +1584,15 @@
           titulo: titulo.value.trim() || "Nota Rápida",
           texto: txt.value,
           imagen: imgUrlFinal,
+          compartidoCon: shareWith || null,
           fecha: new Date().toISOString()
         });
 
-        txt.value = ''; titulo.value = ''; removerImagenPegada(); volverMenuNotas(); showToast('¡Nota guardada al instante!');
+        if(shareWith) {
+           crearNotificacion(shareWith, `${usuarioActual.nombreMostrar} te ha compartido una nota: ${titulo.value.trim() || 'Nota Rápida'}`);
+        }
+
+        txt.value = ''; titulo.value = ''; document.getElementById('notaShareWith').value = ''; removerImagenPegada(); volverMenuNotas(); showToast('¡Nota guardada exitosamente!');
       } catch(err) { showToast("Error al guardar nota", "error"); } finally { txt.disabled = false; titulo.disabled = false; btn.innerText = 'Guardar Nota'; btn.disabled = false; }
     }
 
