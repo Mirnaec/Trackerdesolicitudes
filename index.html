@@ -847,6 +847,22 @@
        <button class="btn-back-canvas" style="margin-bottom:12px; width: fit-content; padding: 4px 10px; font-size:11px;" onclick="volverMenuNotas()">⬅ Atrás</button>
        <div id="notesListItems" style="display:flex; flex-direction:column; gap:8px;"></div>
     </div>
+    
+    <!-- VISTA DETALLE DE NOTA -->
+    <div class="notes-body" id="notesDetailView" style="display:none;">
+       <button class="btn-back-canvas" style="margin-bottom:12px; width: fit-content; padding: 4px 10px; font-size:11px;" onclick="volverDeDetalleNota()">⬅ Volver a la lista</button>
+       
+       <h4 id="detailNoteTitle" style="color: var(--primary-blue); margin-bottom: 4px;"></h4>
+       <div id="detailNoteDate" style="font-size: 10px; color: var(--accent-pink); margin-bottom: 12px; font-weight: bold;"></div>
+       
+       <p id="detailNoteText" style="font-size: 13px; line-height: 1.5; white-space: pre-wrap; margin-bottom: 12px;"></p>
+       
+       <div id="detailNoteImgBox" style="display:none; text-align: center; margin-bottom: 12px;">
+         <img id="detailNoteImg" src="" style="max-width: 100%; border-radius: 6px; border: 1px solid var(--border);">
+       </div>
+       
+       <button class="btn-action btn-danger" id="btnDeleteNote" style="display:none; margin-top: auto;" onclick="borrarNotaActual()">🗑️ Eliminar Nota</button>
+    </div>
   </div>
 
   <script>
@@ -856,6 +872,7 @@
     let listaSolicitudes = [];
     let listaUsuariosEquipo = [];
     let listaNotasGlobal = [];
+    let notaActualSeleccionada = null; // Variable para saber qué nota estamos viendo
     let tareaSeleccionada = null;
     let fechaActualCalendario = new Date();
     let fechaSocialCalendario = new Date();
@@ -1757,7 +1774,12 @@
     // NOTAS Y OTROS
     function toggleNotes() { const panel = document.getElementById('panelNotes'); panel.classList.toggle('active'); panel.classList.remove('minimized'); }
     function minimizarNotas() { document.getElementById('panelNotes').classList.toggle('minimized'); }
-    function volverMenuNotas() { document.getElementById('notesNewView').style.display = 'none'; document.getElementById('notesListView').style.display = 'none'; document.getElementById('notesMainMenu').style.display = 'flex'; }
+    function volverMenuNotas() { 
+      document.getElementById('notesNewView').style.display = 'none'; 
+      document.getElementById('notesListView').style.display = 'none'; 
+      document.getElementById('notesDetailView').style.display = 'none';
+      document.getElementById('notesMainMenu').style.display = 'flex'; 
+    }
     function abrirVistaNuevaNota() { document.getElementById('notesMainMenu').style.display = 'none'; document.getElementById('notesNewView').style.display = 'flex'; }
     function abrirVistaListaNotas() { document.getElementById('notesMainMenu').style.display = 'none'; document.getElementById('notesListView').style.display = 'flex'; cargarNotas(); }
 
@@ -1768,14 +1790,19 @@
         listaNotasGlobal = [];
         snapshot.forEach((doc) => {
           let n = doc.data();
+          n.id = doc.id; // Super importante: guardar el ID para poder borrarla
           if(n.nombreMostrar === usuarioActual.nombreMostrar || n.compartidoCon === usuarioActual.nombreMostrar) {
               listaNotasGlobal.push(n);
           }
         });
         listaNotasGlobal.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
-        const list = document.getElementById('notesListItems'); list.innerHTML = '';
-        if(listaNotasGlobal.length === 0) { list.innerHTML = '<p style="font-size:12px; text-align:center; color:#888;">No hay notas guardadas.</p>'; } 
-        else {
+        
+        const list = document.getElementById('notesListItems'); 
+        list.innerHTML = '';
+        
+        if(listaNotasGlobal.length === 0) { 
+          list.innerHTML = '<p style="font-size:12px; text-align:center; color:#888;">No hay notas guardadas.</p>'; 
+        } else {
           listaNotasGlobal.forEach((n, index) => {
             const dateObj = new Date(n.fecha), tituloMostrar = n.titulo || "Nota Rápida";
             let etiquetaCompartido = '';
@@ -1784,10 +1811,74 @@
             } else if (n.compartidoCon) {
                 etiquetaCompartido = `<span class="note-shared-tag" style="background:#f1f5f9; color:#64748b;">Compartido con ${n.compartidoCon}</span>`;
             }
-            list.innerHTML += `<div class="note-item" onclick="alert('Funcionalidad de ver nota completa')"><div class="note-date">${dateObj.toLocaleDateString()} - ${dateObj.toLocaleTimeString()}</div>${etiquetaCompartido}<div>${tituloMostrar}</div></div>`;
+            // Cambiamos el onclick para que abra el detalle de la nota
+            list.innerHTML += `<div class="note-item" onclick="verDetalleNota('${n.id}')"><div class="note-date">${dateObj.toLocaleDateString()} - ${dateObj.toLocaleTimeString()}</div>${etiquetaCompartido}<div>${tituloMostrar}</div></div>`;
           });
         }
       });
+    }
+
+    // NUEVAS FUNCIONES PARA VER Y BORRAR LA NOTA
+    function verDetalleNota(id) {
+      notaActualSeleccionada = listaNotasGlobal.find(n => n.id === id);
+      if(!notaActualSeleccionada) return;
+
+      document.getElementById('notesListView').style.display = 'none';
+      document.getElementById('notesDetailView').style.display = 'flex';
+
+      document.getElementById('detailNoteTitle').innerText = notaActualSeleccionada.titulo || "Nota Rápida";
+      
+      const dateObj = new Date(notaActualSeleccionada.fecha);
+      document.getElementById('detailNoteDate').innerText = `${dateObj.toLocaleDateString()} - ${dateObj.toLocaleTimeString()}`;
+      
+      document.getElementById('detailNoteText').innerText = notaActualSeleccionada.texto || "";
+
+      const imgBox = document.getElementById('detailNoteImgBox');
+      const imgEl = document.getElementById('detailNoteImg');
+      
+      if(notaActualSeleccionada.imagen) {
+         imgEl.src = notaActualSeleccionada.imagen;
+         imgBox.style.display = 'block';
+      } else {
+         imgBox.style.display = 'none';
+         imgEl.src = "";
+      }
+
+      const btnDel = document.getElementById('btnDeleteNote');
+      // Solo el creador de la nota puede borrarla
+      if(notaActualSeleccionada.nombreMostrar === usuarioActual.nombreMostrar) {
+         btnDel.style.display = 'block';
+      } else {
+         btnDel.style.display = 'none';
+      }
+    }
+
+    function volverDeDetalleNota() {
+      document.getElementById('notesDetailView').style.display = 'none';
+      document.getElementById('notesListView').style.display = 'flex';
+      notaActualSeleccionada = null;
+    }
+
+    async function borrarNotaActual() {
+      if(!notaActualSeleccionada) return;
+      
+      if(confirm("⚠️ ¿Estás seguro de que deseas eliminar esta nota?")) {
+         const btnDel = document.getElementById('btnDeleteNote');
+         btnDel.innerText = "Borrando...";
+         btnDel.disabled = true;
+         
+         try {
+            await window.fbDeleteDoc(window.fbDoc(window.db, "notas", notaActualSeleccionada.id));
+            showToast('Nota eliminada exitosamente');
+            volverDeDetalleNota();
+         } catch(e) {
+            showToast('Error al eliminar la nota', 'error');
+            console.error(e);
+         } finally {
+            btnDel.innerText = "🗑️ Eliminar Nota";
+            btnDel.disabled = false;
+         }
+      }
     }
 
     async function guardarNotaRapida() {
